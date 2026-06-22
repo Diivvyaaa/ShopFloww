@@ -16,27 +16,22 @@ public class ProductController {
 
     public ProductController(ProductRepository p) { products = p; }
 
-    // Any logged-in user can browse products
     @GetMapping
     public List<Product> all() { return products.findAll(); }
 
-    // Admin only: update stock
     @PutMapping("/admin/{id}/stock")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateStock(
-            @PathVariable String id,
-            @RequestBody Map<String, Integer> body) {
+    public ResponseEntity<?> updateStock(@PathVariable Long id, // ✅ was String
+                                         @RequestBody Map<String, Integer> body) {
         return products.findById(id).map(p -> {
             p.setStock(body.get("stock"));
             return ResponseEntity.ok(products.save(p));
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // Admin only: add new product
     @PostMapping("/admin/add")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> addProduct(@RequestBody Product product) {
         return ResponseEntity.ok(products.save(product));
     }
-
 }

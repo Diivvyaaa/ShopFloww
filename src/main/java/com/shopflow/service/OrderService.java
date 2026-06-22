@@ -23,8 +23,9 @@ public class OrderService {
         return orderRepository.findByStatus(status);
     }
 
-    public Order updateStatus(String id, String status) {
-        Optional<Order> optional = orderRepository.findById(id);        if (optional.isPresent()) {
+    public Order updateStatus(Long id, String status) { // ✅ was String
+        Optional<Order> optional = orderRepository.findById(id); // ✅ was String
+        if (optional.isPresent()) {
             Order order = optional.get();
             order.setStatus(status);
             return orderRepository.save(order);

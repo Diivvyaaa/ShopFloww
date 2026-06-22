@@ -9,6 +9,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -34,9 +35,9 @@ public class OrderController {
             System.out.println("OK  placeOrder by: " + auth.getName() + " body=" + body);
 
             User user = users.findByEmail(auth.getName()).orElse(null);
-            if (user == null) return ResponseEntity.status(401).body(Map.of("error","User not found"));
+            if (user == null) return ResponseEntity.status(401).body(Map.of("error", "User not found"));
             if (body.get("product") == null || body.get("total") == null)
-                return ResponseEntity.badRequest().body(Map.of("error","Missing fields"));
+                return ResponseEntity.badRequest().body(Map.of("error", "Missing fields"));
 
             Order order = new Order();
             order.setProduct(body.get("product").toString());
@@ -77,7 +78,7 @@ public class OrderController {
     public ResponseEntity<?> allOrders() {
         try {
             List<Order> all = orders.findAll();
-            all.sort((a, b) -> b.getId().compareTo(a.getId()));
+            all.sort(Comparator.comparingLong(Order::getId).reversed()); // ✅ fixed
             return ResponseEntity.ok(all);
         } catch (Exception e) {
             e.printStackTrace();
@@ -87,7 +88,8 @@ public class OrderController {
 
     @PutMapping("/admin/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> updateStatus(@PathVariable String id, @RequestBody Map<String, String> body) {
+    public ResponseEntity<?> updateStatus(@PathVariable Long id, // ✅ was String
+                                          @RequestBody Map<String, String> body) {
         return orders.findById(id).map(order -> {
             order.setStatus(body.get("status"));
             return ResponseEntity.ok(orders.save(order));

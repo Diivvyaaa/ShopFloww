@@ -31,27 +31,24 @@ public class CartController {
         return users.findByEmail(auth.getName()).orElseThrow();
     }
 
-    // GET /api/cart — get current customer's cart
     @GetMapping
     public ResponseEntity<?> getCart(Authentication auth) {
         User user = getUser(auth);
         return ResponseEntity.ok(cart.findByCustomerId(user.getCustomerId()));
     }
 
-    // POST /api/cart — add item { productId, quantity }
     @PostMapping
     public ResponseEntity<?> addItem(@RequestBody Map<String, Object> body, Authentication auth) {
         User user = getUser(auth);
-        String productId = body.get("productId").toString();
+        Long productId = Long.parseLong(body.get("productId").toString()); // ✅ was String
         int  quantity  = Integer.parseInt(body.get("quantity").toString());
 
-        Product product = products.findById(productId).orElse(null);
+        Product product = products.findById(productId).orElse(null); // ✅ now Long
         if (product == null) return ResponseEntity.notFound().build();
 
-        // Check if already in cart — if so, update qty
         List<CartItem> existing = cart.findByCustomerId(user.getCustomerId());
         for (CartItem item : existing) {
-            if (item.getProductId().equals(productId)) {
+            if (item.getProductId().equals(productId.toString())) {
                 item.setQuantity(item.getQuantity() + quantity);
                 return ResponseEntity.ok(cart.save(item));
             }
@@ -59,30 +56,28 @@ public class CartController {
 
         CartItem item = new CartItem();
         item.setCustomerId(user.getCustomerId());
-        item.setProductId(productId);
+        item.setProductId(productId.toString());
         item.setProductName(product.getName());
         item.setPrice(product.getPrice());
         item.setQuantity(quantity);
         return ResponseEntity.ok(cart.save(item));
     }
 
-    // PUT /api/cart/{id} — update quantity { quantity }
     @PutMapping("/{id}")
-    public ResponseEntity<?> updateItem(@PathVariable String id, @RequestBody Map<String, Integer> body) {
+    public ResponseEntity<?> updateItem(@PathVariable Long id, // ✅ was String
+                                        @RequestBody Map<String, Integer> body) {
         return cart.findById(id).map(item -> {
             item.setQuantity(body.get("quantity"));
             return ResponseEntity.ok(cart.save(item));
         }).orElse(ResponseEntity.notFound().build());
     }
 
-    // DELETE /api/cart/{id} — remove one item
     @DeleteMapping("/{id}")
-    public ResponseEntity<?> removeItem(@PathVariable String id) {
+    public ResponseEntity<?> removeItem(@PathVariable Long id) { // ✅ was String
         cart.deleteById(id);
         return ResponseEntity.ok().build();
     }
 
-    // DELETE /api/cart/clear — clear entire cart after order placed
     @DeleteMapping("/clear")
     public ResponseEntity<?> clearCart(Authentication auth) {
         User user = getUser(auth);
