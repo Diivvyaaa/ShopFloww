@@ -25,33 +25,16 @@ public class DataSeeder implements CommandLineRunner {
     public void run(String... args) {
 
         // ── Seed users only if table is empty ─────────────────────────────────
-        if (users.count() == 0) {
-
-            User admin = new User();
-            admin.setName("Admin");
-            admin.setEmail("admin@shopflow.com");
-            admin.setPassword(encoder.encode("admin123"));
-            admin.setRole("admin");
-            admin.setCustomerId(null);
-            users.save(admin);
-
-            String[][] customers = {
-                { "Aisha Khan",   "aisha@gmail.com", "pass123", "C001" },
-                { "Raj Patel",    "raj@gmail.com",   "pass123", "C002" },
-                { "Lena Fischer", "lena@gmail.com",  "pass123", "C003" },
-            };
-            for (String[] c : customers) {
-                User u = new User();
-                u.setName(c[0]);
-                u.setEmail(c[1]);
-                u.setPassword(encoder.encode(c[2]));
-                u.setRole("customer");
-                u.setCustomerId(c[3]);
-                users.save(u);
-            }
-
-            System.out.println("✅ Users seeded.");
-        }
+      if (users.count() == 0) {
+    User admin = new User();
+    admin.setName("Admin");
+    admin.setEmail("admin@shopflow.com");
+    admin.setPassword(encoder.encode("admin123"));
+    admin.setRole("admin");
+    admin.setCustomerId(null);
+    users.save(admin);
+    System.out.println("✅ Admin seeded.");
+}
 
         // ── Seed products only if table is empty ──────────────────────────────
         if (products.count() == 0) {

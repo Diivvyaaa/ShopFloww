@@ -11,10 +11,12 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -22,32 +24,70 @@ public class AuthController {
 
     private final AuthenticationManager authManager;
     private final UserRepository        users;
+    private final PasswordEncoder       encoder;
 
-    public AuthController(AuthenticationManager authManager, UserRepository users) {
+    public AuthController(AuthenticationManager authManager,
+                          UserRepository users,
+                          PasswordEncoder encoder) {
         this.authManager = authManager;
         this.users       = users;
+        this.encoder     = encoder;
     }
 
+    // ── REGISTER ──────────────────────────────────────────────────────────────
+    @PostMapping("/register")
+    public ResponseEntity<?> register(@RequestBody Map<String, String> body) {
+        String email    = body.get("email");
+        String password = body.get("password");
+        String name     = body.get("name");
+
+        if (email == null || password == null || name == null)
+            return ResponseEntity.badRequest().body(Map.of("error", "Name, email and password are required"));
+
+        if (users.findByEmail(email).isPresent())
+            return ResponseEntity.status(409).body(Map.of("error", "Email already registered"));
+
+        // Auto-generate a unique customerId like C00X
+        String customerId = "C" + String.format("%03d", (users.count() + 1));
+
+        User user = new User();
+        user.setName(name);
+        user.setEmail(email);
+        user.setPassword(encoder.encode(password));
+        user.setRole("customer");
+        user.setCustomerId(customerId);
+
+        User saved = users.save(user);
+        System.out.println("REGISTERED: " + email + " customerId=" + customerId);
+        return ResponseEntity.ok(toMap(saved));
+    }
+
+    // ── LOGIN ─────────────────────────────────────────────────────────────────
     @PostMapping("/login")
     public ResponseEntity<?> login(
             @RequestBody Map<String, String> body,
             HttpServletRequest request,
             HttpServletResponse response) {
         try {
-            // 1. Authenticate
             Authentication auth = authManager.authenticate(
                 new UsernamePasswordAuthenticationToken(body.get("email"), body.get("password"))
             );
 
-            // 2. Store in SecurityContext
             SecurityContext ctx = SecurityContextHolder.createEmptyContext();
             ctx.setAuthentication(auth);
             SecurityContextHolder.setContext(ctx);
 
-            // 3. Save context into the HTTP session explicitly
+            HttpSession oldSession = request.getSession(false);
+            if (oldSession != null) oldSession.invalidate();
+
             HttpSession session = request.getSession(true);
             session.setAttribute(
                 HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, ctx
+            );
+
+            response.setHeader("Set-Cookie",
+                "JSESSIONID=" + session.getId() +
+                "; Path=/; HttpOnly; SameSite=Lax"
             );
 
             System.out.println("LOGIN OK: " + body.get("email") + " sessionId=" + session.getId());
@@ -61,16 +101,17 @@ public class AuthController {
         }
     }
 
+    // ── ME ────────────────────────────────────────────────────────────────────
     @GetMapping("/me")
     public ResponseEntity<?> me(Authentication auth) {
-        if (auth == null || !auth.isAuthenticated()) {
+        if (auth == null || !auth.isAuthenticated())
             return ResponseEntity.status(401).body(Map.of("error", "Not logged in"));
-        }
         return users.findByEmail(auth.getName())
                 .map(u -> ResponseEntity.ok(toMap(u)))
                 .orElse(ResponseEntity.status(401).build());
     }
 
+    // ── LOGOUT ────────────────────────────────────────────────────────────────
     @PostMapping("/logout")
     public ResponseEntity<?> logout(HttpServletRequest request) {
         HttpSession session = request.getSession(false);
