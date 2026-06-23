@@ -13,11 +13,6 @@ public class CorsConfig {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-<<<<<<< HEAD
-                registry.addMapping("/**")
-                    .allowedOriginPatterns("*")
-                    .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
-=======
                 registry.addMapping("/api/**")
                     .allowedOrigins(
                         "http://localhost:3000",
@@ -25,7 +20,6 @@ public class CorsConfig {
                        
                     )
                     .allowedMethods("GET", "POST", "PUT", "DELETE")
->>>>>>> 84a6d64 (NEWDB)
                     .allowCredentials(true);
             }
         };
