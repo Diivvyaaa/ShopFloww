@@ -16,7 +16,6 @@ import org.springframework.security.web.context.HttpSessionSecurityContextReposi
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -47,7 +46,6 @@ public class AuthController {
         if (users.findByEmail(email).isPresent())
             return ResponseEntity.status(409).body(Map.of("error", "Email already registered"));
 
-        // Auto-generate a unique customerId like C00X
         String customerId = "C" + String.format("%03d", (users.count() + 1));
 
         User user = new User();
@@ -85,9 +83,10 @@ public class AuthController {
                 HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY, ctx
             );
 
+            // ✅ SameSite=None; Secure — required for cross-domain cookies
             response.setHeader("Set-Cookie",
                 "JSESSIONID=" + session.getId() +
-                "; Path=/; HttpOnly; SameSite=Lax"
+                "; Path=/; HttpOnly; SameSite=None; Secure"
             );
 
             System.out.println("LOGIN OK: " + body.get("email") + " sessionId=" + session.getId());
